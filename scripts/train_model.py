@@ -34,6 +34,8 @@ def main():
         max_grad_norm=0.1,
         learning_rate=5e-5,
         warmup_steps=300,
+        save_steps=25,
+        eval_steps=25,
         per_device_train_batch_size=2,
         report_to=["tensorboard"],
         metric_for_best_model="eval_map",

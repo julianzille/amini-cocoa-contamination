@@ -13,6 +13,7 @@ datasets
 accelerate
 albumentations==1.4.6
 torchmetrics
+pycocotools
 
 # Optional utilities
 tensorboard
