@@ -1,0 +1,6 @@
+dataset/*
+.venv/*
+.vscode/*
+.DS_Store
+models/*
+**/__pycache__
