@@ -145,7 +145,12 @@ class CocoaDatasetManager:
         dataset = load_dataset("julianz1/cocoa-disease-detection")
 
         # Initialize image processor once
-        self.image_processor = AutoImageProcessor.from_pretrained(self.base_model)
+        self.image_processor = AutoImageProcessor.from_pretrained(
+            self.base_model,
+            do_rescale=True,
+            rescale_factor=0.5,
+            use_fast=True,
+        )
 
         val_transform = A.Compose(
             [A.NoOp()],

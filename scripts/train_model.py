@@ -1,11 +1,11 @@
 from transformers import (
     AutoConfig,
-    RTDetrV2ForObjectDetection,
+    AutoModelForObjectDetection,
 )
 from transformers.trainer import Trainer
 from transformers.training_args import TrainingArguments
 
-from constants import BASE_MODEL, DATASET_REPO, ID2LABEL, LABEL2ID
+from src.constants import BASE_MODEL, DATASET_REPO, ID2LABEL, LABEL2ID
 from src.data_utils import CocoaDatasetManager
 from src.evaluation import MAPEvaluator
 
@@ -13,10 +13,13 @@ from src.evaluation import MAPEvaluator
 def main():
     dataset_manager = CocoaDatasetManager(BASE_MODEL, DATASET_REPO)
     config = AutoConfig.from_pretrained(
-        BASE_MODEL, label2id=LABEL2ID, id2label=ID2LABEL
+        BASE_MODEL, label2id=LABEL2ID, id2label=ID2LABEL, decoder_method="discrete"
     )
-    model = RTDetrV2ForObjectDetection.from_pretrained(
-        BASE_MODEL, config=config, ignore_mismatched_sizes=True
+
+    model = AutoModelForObjectDetection.from_pretrained(
+        BASE_MODEL,
+        config=config,
+        ignore_mismatched_sizes=True,
     )
 
     train_dataset = dataset_manager.get_train_dataset()
@@ -34,8 +37,8 @@ def main():
         max_grad_norm=0.1,
         learning_rate=5e-5,
         warmup_steps=300,
-        save_steps=25,
-        eval_steps=25,
+        save_steps=500,
+        eval_steps=500,
         per_device_train_batch_size=2,
         report_to=["tensorboard"],
         metric_for_best_model="eval_map",
@@ -46,7 +49,7 @@ def main():
         save_total_limit=2,
         remove_unused_columns=False,
         eval_do_concat_batches=False,
-        eval_on_start=True,
+        eval_on_start=False,
     )
     trainer = Trainer(
         model=model,
@@ -57,6 +60,7 @@ def main():
         data_collator=dataset_manager.collate_fn,
         compute_metrics=eval_compute_metrics_fn,
     )
+
     train_results = trainer.train()
     trainer.save_model()
     trainer.log_metrics("train", train_results.metrics)
