@@ -7,8 +7,10 @@ from functools import partial
 import albumentations as A
 import numpy as np
 import torch
-from datasets import load_dataset
-from transformers import AutoImageProcessor
+from datasets import DatasetDict, concatenate_datasets, load_dataset
+from transformers import RTDetrV2ImageProcessor
+
+from src.constants import BATCH_SIZE
 
 
 def format_image_annotations_as_coco(
@@ -129,9 +131,10 @@ def augment_and_transform_batch(
 class CocoaDatasetManager:
     """Class to manage the cocoa disease detection dataset."""
 
-    def __init__(self, base_model: str, dataset_repo: str):
+    def __init__(self, base_model: str, dataset_repo: str, revision: str = "main"):
         self.base_model = base_model
         self.dataset_repo = dataset_repo
+        self.revision = revision
         self.image_processor = None
         self.train_dataset = None
         self.val_dataset = None
@@ -142,14 +145,27 @@ class CocoaDatasetManager:
         print("Loading dataset and initializing image processor...")
 
         # Load dataset once
-        dataset = load_dataset("julianz1/cocoa-disease-detection")
+        dataset = load_dataset(self.dataset_repo, revision=self.revision)
 
+        if not isinstance(dataset, DatasetDict):
+            raise TypeError("Expected a DatasetDict but got a different dataset type")
+
+        validation_size = len(dataset["validation"])
+        remainder = validation_size % BATCH_SIZE
+        if remainder == 1:
+            # Get the first sample from train as a Dataset, not a dict
+            sample_to_move = dataset["train"].select(range(1))
+
+            # Remove the first sample from train
+            dataset["train"] = dataset["train"].select(range(1, len(dataset["train"])))
+
+            # Concatenate validation with the sample
+            dataset["validation"] = concatenate_datasets(
+                [dataset["validation"], sample_to_move]
+            )
         # Initialize image processor once
-        self.image_processor = AutoImageProcessor.from_pretrained(
-            self.base_model,
-            do_rescale=True,
-            rescale_factor=0.5,
-            use_fast=True,
+        self.image_processor = RTDetrV2ImageProcessor.from_pretrained(
+            self.base_model, use_fast=True
         )
 
         val_transform = A.Compose(

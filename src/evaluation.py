@@ -13,9 +13,9 @@ class ModelOutput:
 
 
 class MAPEvaluator:
-    def __init__(self, image_processor, threshold=0.00, id2label=None):
+    def __init__(self, image_processor, conf_threshold=0.3, id2label=None):
         self.image_processor = image_processor
-        self.threshold = threshold
+        self.conf_threshold = conf_threshold
         self.id2label = id2label
 
     def collect_image_sizes(self, targets):
@@ -49,7 +49,7 @@ class MAPEvaluator:
                 logits=torch.tensor(batch_logits), pred_boxes=torch.tensor(batch_boxes)
             )
             post_processed_output = self.image_processor.post_process_object_detection(
-                output, threshold=self.threshold, target_sizes=target_sizes
+                output, threshold=self.conf_threshold, target_sizes=target_sizes
             )
             post_processed_predictions.extend(post_processed_output)
         return post_processed_predictions

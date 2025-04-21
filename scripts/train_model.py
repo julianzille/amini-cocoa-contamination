@@ -1,3 +1,5 @@
+import argparse
+
 from transformers import (
     AutoConfig,
     AutoModelForObjectDetection,
@@ -10,14 +12,47 @@ from src.data_utils import CocoaDatasetManager
 from src.evaluation import MAPEvaluator
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train object detection model")
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default=DATASET_REPO,
+        help="Dataset repository or path",
+    )
+    parser.add_argument(
+        "--dataset_revision",
+        type=str,
+        default="main",
+        help="Dataset revision or branch",
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=2,
+        help="Training batch size",
+    )
+    parser.add_argument(
+        "--base_model",
+        type=str,
+        default=BASE_MODEL,
+        help="Base model to use for training",
+    )
+    return parser.parse_args()
+
+
 def main():
-    dataset_manager = CocoaDatasetManager(BASE_MODEL, DATASET_REPO)
+    args = parse_args()
+
+    dataset_manager = CocoaDatasetManager(
+        args.base_model, args.dataset, revision=args.dataset_revision
+    )
     config = AutoConfig.from_pretrained(
-        BASE_MODEL, label2id=LABEL2ID, id2label=ID2LABEL, decoder_method="discrete"
+        args.base_model, label2id=LABEL2ID, id2label=ID2LABEL, decoder_method="discrete"
     )
 
     model = AutoModelForObjectDetection.from_pretrained(
-        BASE_MODEL,
+        args.base_model,
         config=config,
         ignore_mismatched_sizes=True,
     )
@@ -34,12 +69,12 @@ def main():
     training_args = TrainingArguments(
         output_dir="models/disease-detection",
         num_train_epochs=10,
-        max_grad_norm=0.1,
+        max_grad_norm=5.0,
         learning_rate=5e-5,
         warmup_steps=300,
         save_steps=500,
         eval_steps=500,
-        per_device_train_batch_size=2,
+        per_device_train_batch_size=args.batch_size,
         report_to=["tensorboard"],
         metric_for_best_model="eval_map",
         greater_is_better=True,
@@ -49,7 +84,7 @@ def main():
         save_total_limit=2,
         remove_unused_columns=False,
         eval_do_concat_batches=False,
-        eval_on_start=False,
+        eval_on_start=True,
     )
     trainer = Trainer(
         model=model,

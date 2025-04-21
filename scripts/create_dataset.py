@@ -44,19 +44,19 @@ def load_image_annotations(image_name: str) -> list[dict]:
 def prepare_features():
     return Features(
         {
-            "id": Value("int32"),
+            "id": Value("int16"),
             "image_id": Value("string"),
             "image_name": Value("string"),
             "image": HFImage(),
-            "width": Value("int32"),
-            "height": Value("int32"),
+            "width": Value("int16"),
+            "height": Value("int16"),
             "annotations": Sequence(
                 {
-                    "label": Value("int32"),
-                    "x_center": Value("float32"),
-                    "y_center": Value("float32"),
-                    "width": Value("float32"),
-                    "height": Value("float32"),
+                    "label": Value("int8"),
+                    "x_center": Value("float16"),
+                    "y_center": Value("float16"),
+                    "width": Value("float16"),
+                    "height": Value("float16"),
                 },
             ),
         }
@@ -95,10 +95,11 @@ def main():
     train_val_data = load_data(TRAIN_IMAGES_DIR)
     train_val_dataset = Dataset.from_list(train_val_data, features=prepare_features())
 
-    split_dataset = train_val_dataset.train_test_split(test_size=0.2, seed=42)
+    split_dataset = train_val_dataset.train_test_split(test_size=0.1, seed=42)
+
     split_dataset["validation"] = split_dataset.pop("test")
 
-    split_dataset.save_to_disk(DATASETS_DIR / "cocoa_coco_dataset")
+    split_dataset.push_to_hub("julianz1/cocoa-disease-detection", revision="v1")
 
 
 if __name__ == "__main__":
